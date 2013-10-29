@@ -1,0 +1,17 @@
+[user]
+	name = Dave Marr
+	email = dave@crowdtilt.com
+[color]
+	ui = always
+[alias]
+    co = checkout
+	lal = log --pretty=oneline --abbrev-commit --graph --decorate --all
+	lol = log --pretty=oneline --abbrev-commit --graph --decorate
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+    ru = reset --hard @{upstream}
+    st = status
+    wip = !git add -u && git commit -m ...
+[push]
+	default = current
+[help]
+	autocorrect = 1
