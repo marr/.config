@@ -11,7 +11,11 @@
     ru = reset --hard @{upstream}
     st = status
     wip = !git add -u && git commit -m ...
+	deploys = !git dlog --no-merges origin/master..origin/dev
+	dlog = log --pretty=format:'%Cred%h%Creset - %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
 [push]
 	default = current
 [help]
 	autocorrect = 1
+[hub]
+	protocol = https
