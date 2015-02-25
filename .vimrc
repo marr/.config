@@ -18,10 +18,14 @@ set ignorecase
 set incsearch
 set nocompatible
 set relativenumber
-set softtabstop=2          " stick with convention
-set shiftwidth=2           " ..
-set tabstop=2
+"set softtabstop=4          " stick with convention
+set smarttab
+set shiftwidth=4           " ..
+set tabstop=4
 set expandtab              " expand tabs to spaces
+
+" Include $ in varibale names
+set iskeyword=@,48-57,_,192-255,#,$,-
 
 " Pathogen
 execute pathogen#infect()
@@ -44,15 +48,17 @@ let g:project_unlisted_buffer = 1
 let g:project_disable_tab_title = 1
 
 call project#rc("~/Projects")
-
-Project 'angular', 'Angular JS experiments'
+Project 'ct/tilt-react-components', 'Tilt React Components (TRC)'
 Project 'ct/crowdtilt-internal-api', 'Crowdtilt internal api'
 Project 'ct/crowdtilt-public-site', 'Crowdtilt public site'
+Project 'ct/site', 'New Site'
 Project 'ct/crowdtilt-public-ctiltit', 'tilt.tc shortening'
 Project 'ct/crowdtilt-engineering-blog', 'Crowdtilt blog'
+Project 'ct/chef', 'Chef (deployment configuration)'
+Project 'ct/react-webpack-demo', 'React Webpack Sandbox'
 Project 'lolauth', 'OAuth Test App'
-Project 'phormat', 'Phormat Bower Component'
 Project 'phormat-dancer-server', 'Phormat Dancer App'
+Project 'webpack-with-common-libs', 'Webpack with React, Bootstrap, jQuery'
 Project '../.config', 'Config / dotfiles'
 Project '../src/jquery-validation', 'jQuery validation'
 Project '../src/jquery', 'jQuery'
@@ -60,21 +66,23 @@ Project '../src/jquery', 'jQuery'
 " ------------------------------------------------------------------------------
 " Styling
 " ------------------------------------------------------------------------------
-if has("gui_running")
-    colorscheme jellybeans
-else
-    colorscheme solarized
-    set background=dark
-    set t_Co=16
-endif
+colorscheme jellybeans
 set gfn=MonacoForPowerline:h12
 let g:airline_powerline_fonts = 1
+
+let g:syntastic_javascript_checkers = ['jsxhint']
 
 " ------------------------------------------------------------------------------
 " Leader
 " ------------------------------------------------------------------------------
 let mapleader = ","
 
+" Copy current buffer path relative to root of VIM session to system clipboard
+nnoremap <Leader>yp :let @*=expand("%")<cr>:echo "Copied file path to clipboard"<cr>
+" Copy current filename to system clipboard
+nnoremap <Leader>yf :let @*=expand("%:t")<cr>:echo "Copied file name to clipboard"<cr>
+" Copy current buffer path without filename to system clipboard
+nnoremap <Leader>yd :let @*=expand("%:h")<cr>:echo "Copied file directory to clipboard"<cr>
 
 " ------------------------------------------------------------------------------
 "  Plugin Ctrl-p
@@ -82,6 +90,9 @@ let mapleader = ","
 " Set Ctrl-P to show match at top of list instead of at bottom, which is so
 " stupid that it's not default
 let g:ctrlp_match_window_reversed = 0
+
+" Unset cap of 10,000 files so we find everything
+let g:ctrlp_max_files = 0
 
 " Tell Ctrl-P to keep the current VIM working directory when starting a
 " search, another really stupid non default
@@ -122,6 +133,7 @@ let g:ctrlp_open_multi = '10t'
 nnoremap <Leader>dd _yg_"_dd
 nnoremap <Leader>yy _yg_
 
+
 " ------------------------------------------------------------------------------
 " File type customizations. Use tt2* sparingly, they slow down vim considerably
 " ------------------------------------------------------------------------------
@@ -158,13 +170,18 @@ nnoremap <Leader>u :GundoToggle<CR>
 " NERDTree
 nnoremap <Leader>n :NERDTreeToggle<CR>
 
+" opens $HOME/.profile for editing
+nnoremap <Leader>e :e $HOME/.profile<CR>
+
 " source $MYVIMRC reloads the saved $MYVIMRC
 nnoremap <Leader>s :source $MYVIMRC<CR>
 
 " opens $MYVIMRC for editing, or use :tabedit $MYVIMRC
 nnoremap <Leader>v :e $MYVIMRC<CR>
 
-
+" * and # search for next/previous of selected text when used in visual mode
+vnoremap * :<C-u>call <SID>VSetSearch()<CR>/<CR>
+vnoremap # :<C-u>call <SID>VSetSearch()<CR>?<CR>
 " ------------------------------------------------------------------------------
 " Status bar
 " ------------------------------------------------------------------------------
@@ -179,6 +196,27 @@ set statusline+=%{&fileformat}]              " file format
 set statusline+=%{fugitive#statusline()}
 set statusline+=%=                           " right align
 set statusline+=%-10.(%l,%c%V%)\ %<%P        " offset
+
+ function! DeleteInactiveBufs()
+    "From tabpagebuflist() help, get a list of all buffers in all tabs
+    let tablist = []
+    for i in range(tabpagenr('$'))
+        call extend(tablist, tabpagebuflist(i + 1))
+    endfor
+
+    "Below originally inspired by Hara Krishna Dara and Keith Roberts
+    "http://tech.groups.yahoo.com/group/vim/message/56425
+    let nWipeouts = 0
+    for i in range(1, bufnr('$'))
+        if bufexists(i) && !getbufvar(i,"&mod") && index(tablist, i) == -1
+        "bufno exists AND isn't modified AND isn't in the list of buffers open in windows and tabs
+            silent exec 'bwipeout' i
+            let nWipeouts = nWipeouts + 1
+        endif
+    endfor
+    echomsg nWipeouts . ' buffer(s) wiped out'
+endfunction
+command! Bdi :call DeleteInactiveBufs()
 
 " ------------------------------------------------------------------------------
 " Git conflicts,  use with bash alias:
@@ -262,4 +300,62 @@ function! ProcessConflictFiles( conflictFiles )
     highlight Conflict guifg=white guibg=red
     match Conflict /^=\{7}.*\|^>\{7}.*\|^<\{7}.*/
     let @/ = '>>>>>>>\|=======\|<<<<<<<'
+endfunction
+
+function! FormatJson()
+    !silent exec '%s/\v\S+\s*:\s*[^,]*,/\0\r'
+    !silent exec '%s/\v\S+\s*:\s*\{/\0\r'
+    !silent exec '%s/\v[^{]\zs\},/\r\0'
+    normal vie=
+    exec 'set ft=javascript'
+endfunction
+
+function! FormatPerlObj()
+    silent! exec '%s/\v\S+\s*\=\>\s*[^,]*,/\0\r'
+    silent! exec '%s/\v\S+\s*\=\>\s*\{/\0\r'
+    silent! exec '%s/\v[^{]\zs\},/\r\0'
+    normal vie=
+    exec 'set ft=perl'
+endfunction
+
+function! s:VSetSearch()
+    let old = @"
+    norm! gvy
+    let @/ = '\V' . substitute(escape(@", '\'), '\n', '\\n', 'g')
+    let @" = old
+endfunction
+
+" Remove non visible buffers
+" From http://stackoverflow.com/questions/1534835/how-do-i-close-all-buffers-that-arent-shown-in-a-window-in-vim
+function! Wipeout()
+  " list of *all* buffer numbers
+  let l:buffers = range(1, bufnr('$'))
+
+  " what tab page are we in?
+  let l:currentTab = tabpagenr()
+  try
+    " go through all tab pages
+    let l:tab = 0
+    while l:tab < tabpagenr('$')
+      let l:tab += 1
+
+      " go through all windows
+      let l:win = 0
+      while l:win < winnr('$')
+        let l:win += 1
+        " whatever buffer is in this window in this tab, remove it from
+        " l:buffers list
+        let l:thisbuf = winbufnr(l:win)
+        call remove(l:buffers, index(l:buffers, l:thisbuf))
+      endwhile
+    endwhile
+
+    " if there are any buffers left, delete them
+    if len(l:buffers)
+      execute 'bwipeout' join(l:buffers)
+    endif
+  finally
+    " go back to our original tab page
+    execute 'tabnext' l:currentTab
+  endtry
 endfunction

@@ -1,3 +1,5 @@
 ---
 github.com:
+- protocol: https
   user: marr
+  oauth_token: 2c19170d65d381ecdaa01d23bbde4de8e5f0cf98
